@@ -55,21 +55,8 @@
 					<button onclick='createPost()' class='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2'>Post</button>
 				</div>
 
-				<!-- Example Post -->
-				<div class='bg-white shadow-md rounded-lg p-4 mb-4'>
-					<div class='flex items-center mb-2'>
-						<img src='assets/img/default.jpg' alt='Profile Picture' class='w-8 h-8 rounded-full mr-2'>
-						<span class='font-semibold'>John Doe</span>
-					</div>
-					<p>Had an amazing trip to Italy!</p>
-					<small>Event Date: 2023-07-15</small>
-					<div class='mt-2'>
-						<button class='bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded'>Like</button>
-						<button class='bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded'>Comment</button>
-					</div>
-				</div>
-
-				<!-- More posts will be loaded here -->
+				<!-- Posts will be loaded here -->
+				<div id='postsContainer'></div>
 			</div>
 		</main>
 
@@ -79,5 +66,44 @@
 		</footer>
 	</div>
 	<script src='assets/js/main.js'></script>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			loadPosts();
+		});
+
+		async function loadPosts() {
+			const postsContainer = document.getElementById('postsContainer');
+			try {
+				const response = await fetch('api/get_posts.php');
+				const posts = await response.json();
+
+				if (posts && Array.isArray(posts)) {
+					posts.forEach(post => {
+						const postDiv = document.createElement('div');
+						postDiv.classList.add('bg-white', 'shadow-md', 'rounded-lg', 'p-4', 'mb-4');
+
+						postDiv.innerHTML = `
+							<div class='flex items-center mb-2'>
+								<img src='assets/img/${post.profile_picture}' alt='Profile Picture' class='w-8 h-8 rounded-full mr-2'>
+								<span class='font-semibold'>${post.username}</span>
+							</div>
+							<p>${post.content}</p>
+							<small>Event Date: ${post.event_date}</small>
+							<div class='mt-2'>
+								<button class='bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded'>Like</button>
+								<button class='bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded'>Comment</button>
+							</div>
+						`;
+						postsContainer.appendChild(postDiv);
+					});
+				} else {
+					postsContainer.innerHTML = '<p>No posts found.</p>';
+				}
+			} catch (error) {
+				console.error('Error loading posts:', error);
+				postsContainer.innerHTML = '<p>Error loading posts.</p>';
+			}
+		}
+	</script>
 </body>
 </html>
