@@ -3,11 +3,182 @@
 <head>
 	<meta charset='UTF-8'>
 	<meta name='viewport' content='width=device-width, initial-scale=1.0'>
-	<title>ChronoNexus</title>
-	<script src='[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)'></script>
+	<title>ChronoNexus - Friends</title>
+	<script src='https://cdn.tailwindcss.com'></script>
 	<link rel='stylesheet' href='assets/css/style.css'>
 </head>
 <body class='bg-gray-100'>
-	<!-- Content for friends.html -->
+	<div class='container mx-auto p-4'>
+		<h1 class='text-2xl font-semibold mb-4'>Friends</h1>
+
+		<div id='friendsList' class='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+			<!-- Friends will be loaded here -->
+		</div>
+
+		<h2 class='text-xl font-semibold mt-6 mb-2'>Find New Friends</h2>
+		<div id='searchFriends' class='mb-4'>
+			<input type='text' id='searchUsername' placeholder='Enter username' class='shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline'>
+			<button id='searchButton' class='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2'>Search</button>
+			<div id='searchResults'>
+				<!--Search results will be displayed here -->
+			</div>
+		</div>
+	</div>
+
+	<script src='assets/js/main.js'></script>
+	<script>
+		document.addEventListener('DOMContentLoaded', () => {
+			const friendsList = document.getElementById('friendsList');
+			const searchButton = document.getElementById('searchButton');
+			const searchUsernameInput = document.getElementById('searchUsername');
+			const searchResultsDiv = document.getElementById('searchResults');
+
+			// Function to load friends
+			const loadFriends = async () => {
+				try {
+					const response = await fetch('api/get_friends.php');
+					if (!response.ok) {
+						throw new Error('Failed to fetch friends');
+					}
+					const data = await response.json();
+
+					if (data.success) {
+						friendsList.innerHTML = ''; // Clear existing list
+						if (data.friends.length > 0) {
+							data.friends.forEach(friend => {
+								const friendDiv = document.createElement('div');
+								friendDiv.classList.add('bg-white', 'rounded-lg', 'shadow-md', 'p-4');
+								friendDiv.innerHTML = `
+									<img src='assets/img/${friend.profile_picture}' alt='${friend.username}' class='w-16 h-16 rounded-full mx-auto mb-2'>
+									<h3 class='text-lg font-semibold text-center'>${friend.username}</h3>
+									<button class='removeFriendButton bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-2 block mx-auto' data-friend-id='${friend.id}'>Remove Friend</button>
+								`;
+								friendsList.appendChild(friendDiv);
+							});
+
+							// Add event listeners to remove friend buttons
+							const removeFriendButtons = document.querySelectorAll('.removeFriendButton');
+							removeFriendButtons.forEach(button => {
+								button.addEventListener('click', async (event) => {
+									const friendId = event.target.dataset.friendId;
+									if (confirm('Are you sure you want to remove this friend?')) {
+										try {
+											const response = await fetch('api/delete_friend.php', {
+												method: 'POST',
+												headers: {
+													'Content-Type': 'application/json'
+												},
+												body: JSON.stringify({ friend_id: friendId })
+											});
+
+											if (!response.ok) {
+												throw new Error('Failed to remove friend');
+											}
+
+											const data = await response.json();
+
+											if (data.success) {
+												alert('Friend removed successfully!');
+												loadFriends(); // Reload friends list
+											} else {
+												alert('Failed to remove friend: ' + data.message);
+											}
+										} catch (error) {
+											console.error('Error removing friend:', error);
+											alert('Error removing friend: ' + error.message);
+										}
+									}
+								});
+							});
+						} else {
+							friendsList.innerHTML = '<p>No friends found.</p>';
+						}
+					} else {
+						friendsList.innerHTML = `<p>Error loading friends: ${data.message}</p>`;
+					}
+				} catch (error) {
+					console.error('Error loading friends:', error);
+					friendsList.innerHTML = '<p>Error loading friends.</p>';
+				}
+			};
+
+			// Function to search for users
+			const searchUsers = async (username) => {
+				try {
+					const response = await fetch(`api/get_user.php?username=${username}`); // using get_user to search
+					if (!response.ok) {
+						throw new Error('Failed to search users');
+					}
+					const data = await response.json();
+					console.log(data);
+
+					if (data.success) {
+						searchResultsDiv.innerHTML = ''; // Clear previous results
+						if (data.user) {
+							const user = data.user;
+							const userDiv = document.createElement('div');
+							userDiv.classList.add('bg-white', 'rounded-lg', 'shadow-md', 'p-4', 'mb-2');
+							userDiv.innerHTML = `
+								<img src='assets/img/${user.profile_picture}' alt='${user.username}' class='w-16 h-16 rounded-full mx-auto mb-2'>
+								<h3 class='text-lg font-semibold text-center'>${user.username}</h3>
+								<button class='addFriendButton bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2 block mx-auto' data-user-id='${user.id}'>Add Friend</button>
+							`;
+							searchResultsDiv.appendChild(userDiv);
+							const addFriendButton = userDiv.querySelector('.addFriendButton');
+							addFriendButton.addEventListener('click', async () => {
+								const userId = addFriendButton.dataset.userId;
+								try {
+									const addFriendResponse = await fetch('api/add_friend.php', {
+										method: 'POST',
+										headers: {
+											'Content-Type': 'application/json'
+										},
+										body: JSON.stringify({ friend_id: userId })
+									});
+
+									if (!addFriendResponse.ok) {
+										throw new Error('Failed to add friend');
+									}
+									const addFriendData = await addFriendResponse.json();
+									if (addFriendData.success) {
+										alert('Friend request sent successfully!');
+										searchResultsDiv.innerHTML = ''; // Clear the result after adding friend
+									} else {
+										alert('Failed to add friend: ' + addFriendData.message);
+									}
+
+								} catch (error) {
+									console.error('Error adding friend:', error);
+									alert('Error adding friend: ' + error.message);
+								}
+							});
+
+						} else {
+							searchResultsDiv.innerHTML = '<p>No user found with that username.</p>';
+						}
+					} else {
+						searchResultsDiv.innerHTML = `<p>Error searching users: ${data.message}</p>`;
+					}
+				} catch (error) {
+					console.error('Error searching users:', error);
+					searchResultsDiv.innerHTML = '<p>Error searching users.</p>';
+				}
+			};
+
+
+			// Event listener for the search button
+			searchButton.addEventListener('click', () => {
+				const username = searchUsernameInput.value.trim();
+				if (username) {
+					searchUsers(username);
+				} else {
+					alert('Please enter a username to search.');
+				}
+			});
+
+			// Load friends on page load
+			loadFriends();
+		});
+	</script>
 </body>
 </html>
