@@ -90,7 +90,7 @@
 							<p>${post.content}</p>
 							<small>Event Date: ${post.event_date}</small>
 							<div class='mt-2'>
-								<button class='bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded'>Like</button>
+								<button onclick='likePost(${post.id}, this)' class='like-button bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded'>${post.is_liked ? 'Unlike' : 'Like'}</button>
 								<button onclick='toggleCommentSection(${post.id})' class='bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded'>Comment</button>
 							</div>
 							<div id='commentSection-${post.id}' class='mt-2 hidden'>
@@ -169,6 +169,32 @@
 		function toggleCommentSection(postId) {
 			const commentSection = document.getElementById(`commentSection-${postId}`);
 			commentSection.classList.toggle('hidden');
+		}
+
+		async function likePost(postId, button) {
+			const isLiked = button.textContent.trim() === 'Unlike';
+			const endpoint = isLiked ? 'api/unlike_post.php' : 'api/like_post.php';
+
+			try {
+				const response = await fetch(endpoint, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded'
+					},
+					body: `post_id=${postId}`
+				});
+
+				const result = await response.json();
+
+				if (result.success) {
+					button.textContent = isLiked ? 'Like' : 'Unlike';
+				} else {
+					alert('Error: ' + result.message);
+				}
+			} catch (error) {
+				console.error('Error liking/unliking post:', error);
+				alert('Error liking/unliking post.');
+			}
 		}
 	</script>
 </body>
