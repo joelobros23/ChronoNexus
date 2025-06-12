@@ -91,10 +91,16 @@
 							<small>Event Date: ${post.event_date}</small>
 							<div class='mt-2'>
 								<button class='bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded'>Like</button>
-								<button class='bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded'>Comment</button>
+								<button onclick='toggleCommentSection(${post.id})' class='bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-1 px-2 rounded'>Comment</button>
+							</div>
+							<div id='commentSection-${post.id}' class='mt-2 hidden'>
+								<textarea id='commentText-${post.id}' class='w-full border rounded-md p-2' placeholder='Write a comment...'></textarea>
+								<button onclick='addComment(${post.id})' class='bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mt-1'>Post Comment</button>
+								<div id='comments-${post.id}' class='mt-2'></div>
 							</div>
 						`;
 						postsContainer.appendChild(postDiv);
+						loadComments(post.id);
 					});
 				} else {
 					postsContainer.innerHTML = '<p>No posts found.</p>';
@@ -103,6 +109,66 @@
 				console.error('Error loading posts:', error);
 				postsContainer.innerHTML = '<p>Error loading posts.</p>';
 			}
+		}
+
+		async function loadComments(postId) {
+			const commentsContainer = document.getElementById(`comments-${postId}`);
+			try {
+				const response = await fetch(`api/get_comments.php?post_id=${postId}`);
+				const comments = await response.json();
+
+				if (comments && Array.isArray(comments)) {
+					comments.forEach(comment => {
+						const commentDiv = document.createElement('div');
+						commentDiv.classList.add('bg-gray-100', 'rounded-md', 'p-2', 'mb-1');
+						commentDiv.innerHTML = `
+							<span class='font-semibold'>${comment.username}:</span>
+							<span>${comment.content}</span>
+						`;
+						commentsContainer.appendChild(commentDiv);
+					});
+				} else {
+					commentsContainer.innerHTML = '<p>No comments yet.</p>';
+				}
+			} catch (error) {
+				console.error('Error loading comments:', error);
+				commentsContainer.innerHTML = '<p>Error loading comments.</p>';
+			}
+		}
+
+		async function addComment(postId) {
+			const commentText = document.getElementById(`commentText-${postId}`).value;
+			if (!commentText) {
+				alert('Please enter a comment.');
+				return;
+			}
+
+			try {
+				const response = await fetch('api/comment.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded'
+					},
+					body: `post_id=${postId}&content=${commentText}`
+				});
+
+				const result = await response.json();
+
+				if (result.success) {
+					document.getElementById(`commentText-${postId}`).value = '';
+					loadComments(postId); // Reload comments after adding
+				} else {
+					alert('Error adding comment: ' + result.message);
+				}
+			} catch (error) {
+				console.error('Error adding comment:', error);
+				alert('Error adding comment.');
+			}
+		}
+
+		function toggleCommentSection(postId) {
+			const commentSection = document.getElementById(`commentSection-${postId}`);
+			commentSection.classList.toggle('hidden');
 		}
 	</script>
 </body>
